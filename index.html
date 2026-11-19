@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <!-- 폰에서 확대/축소 없이 화면에 꽉 차게 보이도록 한다 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>로봇 연구소 (시험판)</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #2A2120; overflow: hidden; }
+    /* 게임 화면: 세로 9:16 비율을 지키면서 창 높이에 맞춘다. 창이 좁으면 너비에 맞춘다. */
+    #wrap {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #unity-canvas {
+      height: 100dvh; width: min(100vw, calc(100dvh * 9 / 16));
+      max-height: calc(100vw * 16 / 9 + 200px);
+      background: #2A2120; display: block;
+      touch-action: none;   /* 조각을 끌 때 페이지가 같이 움직이지 않게 한다 */
+    }
+    /* 불러오는 동안 보이는 진행 표시 */
+    #loading {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+      color: #FBF3EA; font: 18px system-ui, sans-serif; background: #2A2120;
+    }
+    #bar { width: min(70vw, 320px); height: 10px; border-radius: 5px; background: #5A4A46; overflow: hidden; }
+    #fill { width: 0%; height: 100%; background: #22B8A0; transition: width .2s; }
+  </style>
+</head>
+<body>
+  <div id="wrap"><canvas id="unity-canvas" tabindex="-1"></canvas></div>
+  <div id="loading">
+    <div>로봇 연구소를 불러오는 중…</div>
+    <div id="bar"><div id="fill"></div></div>
+    <div id="error" style="color:#EF5B5B; max-width: 80vw; text-align:center;"></div>
+  </div>
+
+  <script src="Build/web.loader.js"></script>
+  <script>
+    // Unity가 만든 게임 파일을 불러와서 캔버스에 띄운다.
+    const canvas = document.querySelector("#unity-canvas");
+    const loading = document.querySelector("#loading");
+    const fill = document.querySelector("#fill");
+    const errorBox = document.querySelector("#error");
+
+    createUnityInstance(canvas, {
+      dataUrl: "Build/web.data",
+      frameworkUrl: "Build/web.framework.js",
+      codeUrl: "Build/web.wasm",
+      companyName: "tepalmafia",
+      productName: "로봇 연구소",
+      productVersion: "0.1",
+      // 캔버스 크기에 맞춰 그리는 해상도를 자동으로 맞춘다. 폰의 고해상도 화면에서도 선명하게 보인다.
+      matchWebGLToCanvasSize: true,
+      // 저장 파일을 브라우저 저장소에 자동으로 기록한다. 이게 없으면 창을 닫을 때 진행이 사라질 수 있다.
+      autoSyncPersistentDataPath: true,
+      // 폰 화면의 실제 점 개수대로 그린다. 예전에는 2배까지로 막아서 3배 화면의 폰에서 흐릿하게 늘어났다.
+      // 4배가 넘는 화면은 드물고 그리는 부담만 커져서 거기까지만 허용한다.
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 4),
+      showBanner: (message, type) => { if (type === "error") errorBox.textContent = message; },
+    }, (progress) => {
+      fill.style.width = Math.round(progress * 100) + "%";
+    }).then((instance) => {
+      // 점검할 때 브라우저에서 게임에 명령을 보낼 수 있게 게임 본체를 담아 둔다.
+      window.unityInstance = instance;
+      loading.style.display = "none";
+    }).catch((message) => {
+      errorBox.textContent = "불러오지 못했어요: " + message;
+    });
+  </script>
+</body>
+</html>
